@@ -22,7 +22,22 @@ define(['N/currentRecord', 'N/url'],
         function pageInit(scriptContext) {
             window.onbeforeunload =null;
         }
-    
+        function redirectToSuiteletPage() {
+            try {
+                let currRecord = currentRecord.get();
+                let employeeId = currRecord.getValue({
+                    fieldId: "custpage_jj_employee"
+                });
+                let suiteletUrl = url.resolveScript({
+                    scriptId: 'customscript_jj_sl_suitelet_2_otp6939',
+                    deploymentId: 'customdeploy_jj_sl_suitelet_2_otp6939'
+                });
+                window.location.href = suiteletUrl + '&employee=' + employeeId;
+            }
+            catch(e){
+                log.debug('Error@redirectToSalesOrdersPage', e.stack + '\n' + e.message);
+            }
+        }
         /**
          * Function to be executed when field is changed.
          *
@@ -37,28 +52,25 @@ define(['N/currentRecord', 'N/url'],
          */
       
         function fieldChanged(scriptContext) {
-            console.log("triggering");
-        if(scriptContext.fieldId == 'custpage_jj_pageid') {    
-        let pageId = scriptContext.currentRecord.getValue({
-            fieldId: "custpage_jj_pageid"
-        });
-      
 
-        let pageStr  = parseInt(pageId.split('_')[1]);
-        console.log("pageId",pageStr);
-        // let result = pageStr.split('- ')[1];
-        // let integer = parseInt(result);
-        //pageId = parseInt(pageId.split('-')[1]);//NaN
-        // console.log("pagestr",result);
-        if(pageId){
+            console.log("triggering");
+            let pageId = scriptContext.currentRecord.getValue({
+                fieldId: "custpage_jj_pageid"
+            });
+            let employeeId = scriptContext.currentRecord.getValue({
+                fieldId: "custpage_jj_employee"
+            });
+        if(scriptContext.fieldId == 'custpage_jj_pageid') {    
+
         document.location = url.resolveScript({
             deploymentId:  getParameterFromURL('deploy'),
             scriptId: getParameterFromURL('script'),
             params: {
-                pageid : pageStr
+                pageid :pageId,
+                empId : employeeId
             }
         })
-    }
+    
     
         }
     }
@@ -71,8 +83,8 @@ define(['N/currentRecord', 'N/url'],
             });
             console.log("employee",employeeId);
             document.location = url.resolveScript({
-                deploymentId: "customdeploy_jj_sl_suite_otp7939",
-                scriptId: "customscript_jj_sl_suite_otp7939",
+                deploymentId: "customdeploy_jj_sl_suitelet_2_otp6939",
+                scriptId: "customscript_jj_sl_suitelet_2_otp6939",
                 params: {
                     empId : employeeId
                 }
@@ -90,8 +102,8 @@ define(['N/currentRecord', 'N/url'],
         function getSuiteletPage(pageId) {
            
             document.location = url.resolveScript({
-                    scriptId : "customdeploy_jj_sl_suite_otp7939",
-                    deploymentId : "customscript_jj_sl_suite_otp7939",
+                    scriptId : "customdeploy_jj_sl_suitelet_2_otp6939",
+                    deploymentId : "customscript_jj_sl_suitelet_2_otp6939",
                     params : {
                         pageid : pageId,
                     }
@@ -114,7 +126,9 @@ define(['N/currentRecord', 'N/url'],
             pageInit: pageInit,
             setValues:setValues,
             fieldChanged:fieldChanged,
-           getSuiteletPage: getSuiteletPage
+           getSuiteletPage: getSuiteletPage,
+           redirectToSuiteletPage:redirectToSuiteletPage
+
         };
         
     });

@@ -2,7 +2,7 @@
  * @NApiVersion 2.1
  * @NScriptType Suitelet
  */
-define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file','N/redirect'],
+define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file'],
     /**
  * @param{email} email
  * @param{record} record
@@ -85,6 +85,71 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file','N/redir
            
             return csvContent;
         }
+        function SearchResults(employeeId,pageId){
+            try {
+                   
+                let purchaseorderSearchObj = search.create({
+                    type: "purchaseorder",
+                    settings:[{"name":"consolidationtype","value":"ACCTTYPE"}],
+                    filters:
+                    [
+                       ["type","anyof","PurchOrd"], 
+                       "AND", 
+                       ["mainline","is","T"], 
+                       "AND", 
+                       ["datecreated","within","thismonth"], 
+                       "AND", 
+                       ["status","anyof","PurchOrd:F"], 
+                       "AND", 
+                       ["createdby","anyof",employeeId]
+                    ],
+                    columns:
+                    [
+                       search.createColumn({name: "tranid", label: "Document Number"}),
+                       search.createColumn({
+                          name: "entityid",
+                          join: "vendor",
+                          label: "Name"
+                       }),
+                       search.createColumn({name: "memo", label: "Memo"}),
+                       search.createColumn({name: "amount", label: "Amount"}),
+                       search.createColumn({name: "datecreated", label: "Date Created"}),
+                       search.createColumn({name: "createdby", label: "Created By"})
+                    ]
+                 });
+                 
+                //  log.debug("resultsearch",searchResults);
+                 let pageSize = 10;
+                 let pagedData = purchaseorderSearchObj.runPaged({ pageSize: pageSize });
+                 let searchResultCount = pagedData.count;
+                 log.debug("purchaseorderSearchObj result count",searchResultCount);
+                 //selectOptions.defaultValue = pageId;
+                     let pageCount = Math.ceil(searchResultCount / pageSize);
+                     log.debug("pageCount",pageCount);
+                    let currentPage;
+                     if (pageCount === 0) {
+                        alert("No Results Found");
+                      } else {
+                        
+                        if (pageId < 0 || pageId >= pageCount) {
+                          pageId = 0;
+                        }
+                        currentPage = pagedData.fetch({
+                            index : pageId
+                        });
+                        return {
+                            currentPage:currentPage,
+                            pageCount:pageCount,
+                            pageid:pageId
+                        }
+                       
+                }
+                
+
+            } catch (e) {
+                log.error("Error",e.message)
+            }
+        }
         function sendEmailToSupervisor(supervisor,csvFileId,supervisorName){
             email.send({
                 author:-5 ,
@@ -99,27 +164,28 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file','N/redir
             let body = "Email Sent to "+supervisorName;
             return body;
         }
-        function fetchSearchResult(pagedData,pageIndex) {
+        function fetchSearchResult(pagedData) {
 
         try {
-            let searchPage = pagedData.fetch({
-                index : pageIndex
-            });
+            // let searchPage = pagedData.fetch({
+            //     index : pageIndex
+            // });
             // log.debug("")
         let results = new Array();
 
-        searchPage.data.forEach(function (result) {
+        for(let i =0;i<pagedData.length;i++){
            
             results.push({
-                "docno":result.getValue({name: "tranid", label: "Document Number"}),
-                "vendor": result.getValue({ name: "entityid",
+                "docno":pagedData[i].getValue({name: "tranid", label: "Document Number"}),
+                "vendor": pagedData[i].getValue({ name: "entityid",
                     join: "vendor",
                     label: "Name"}),
-                "memo":result.getValue({ name: "memo", label: "Memo"}),
-                "total":result.getValue({ name: "amount", label: "Amount"})
+                "memo":pagedData[i].getValue({ name: "memo", label: "Memo"}),
+                "total":pagedData[i].getValue({ name: "amount", label: "Amount"})
             });
-            return true;
-        });
+            
+        }
+        log.debug("results",results);
         return results;
         } catch (e) {
             log.error("Error on Fetch Search Results",e.message)
@@ -140,13 +206,17 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file','N/redir
                     id: "custpage_jj_page_group",
                     label: "Page Group"
                 })
-                form.clientScriptFileId = 3253;
+                form.clientScriptFileId = 3259;
+                // form.clientScriptModulePath='SuiteScripts/jobinandjismi/jj_sl_suitelet_cpy2_otp7939.js';
+               
+                let employeeId = scriptContext.request.parameters.empId||'';
                 let employee = form.addField({
                     id: "custpage_jj_employee",
                     label: "Select a Employee",
                     type: serverWidget.FieldType.SELECT,
                     container: "custpage_jj_filter"
                 });
+                
                 let results = EmployeeSearch();
                 employee.addSelectOption({
                     value: "",
@@ -210,103 +280,119 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file','N/redir
                     type : serverWidget.FieldType.SELECT,
                     container:"custpage_jj_page_group"
                 });
-                let employeeId = scriptContext.request.parameters.empId||'';
+               
+                let pageId = scriptContext.request.parameters.pageid||0;   
+                    log.debug("pageId",pageId)
+                    selectOptions.defaultValue = pageId;
                 
-                employee.defaultValue = employeeId;
-                // const pageSize  = 10;
+                 const pageSize  = 10;
                 log.debug("empid",employeeId);
-                if(employeeId){
-                    let purchaseorderSearchObj = search.create({
-                        type: "purchaseorder",
-                        settings:[{"name":"consolidationtype","value":"ACCTTYPE"}],
-                        filters:
-                        [
-                           ["type","anyof","PurchOrd"], 
-                           "AND", 
-                           ["mainline","is","T"], 
-                           "AND", 
-                           ["datecreated","within","thismonth"], 
-                           "AND", 
-                           ["status","anyof","PurchOrd:F"], 
-                           "AND", 
-                           ["createdby","anyof",employeeId]
-                        ],
-                        columns:
-                        [
-                           search.createColumn({name: "tranid", label: "Document Number"}),
-                           search.createColumn({
-                              name: "entityid",
-                              join: "vendor",
-                              label: "Name"
-                           }),
-                           search.createColumn({name: "memo", label: "Memo"}),
-                           search.createColumn({name: "amount", label: "Amount"}),
-                           search.createColumn({name: "datecreated", label: "Date Created"}),
-                           search.createColumn({name: "createdby", label: "Created By"})
-                        ]
-                     });
-                     let searchResults  = purchaseorderSearchObj.run();
+                if(employeeId && pageId>=0){
+                    let searchData = SearchResults(employeeId,pageId)
+                    log.debug("sear",searchData);
+                    let searchPage;
+                    let totalLines;
+                    // if(!searchData){
+                       
+                        searchPage = searchData.currentPage.data;
+                         log.debug("currentPage",searchPage);
+                         totalLines = searchData.pageCount;
+                        let pageid = searchData.pageid;
+                        let results = fetchSearchResult(searchPage);
+                        log.debug("results",results);
+                    //}
+                  
+                    // let purchaseorderSearchObj = search.create({
+                    //     type: "purchaseorder",
+                    //     settings:[{"name":"consolidationtype","value":"ACCTTYPE"}],
+                    //     filters:
+                    //     [
+                    //        ["type","anyof","PurchOrd"], 
+                    //        "AND", 
+                    //        ["mainline","is","T"], 
+                    //        "AND", 
+                    //        ["datecreated","within","thismonth"], 
+                    //        "AND", 
+                    //        ["status","anyof","PurchOrd:F"], 
+                    //        "AND", 
+                    //        ["createdby","anyof",employeeId]
+                    //     ],
+                    //     columns:
+                    //     [
+                    //        search.createColumn({name: "tranid", label: "Document Number"}),
+                    //        search.createColumn({
+                    //           name: "entityid",
+                    //           join: "vendor",
+                    //           label: "Name"
+                    //        }),
+                    //        search.createColumn({name: "memo", label: "Memo"}),
+                    //        search.createColumn({name: "amount", label: "Amount"}),
+                    //        search.createColumn({name: "datecreated", label: "Date Created"}),
+                    //        search.createColumn({name: "createdby", label: "Created By"})
+                    //     ]
+                    //  });
+                    //  let searchResults  = purchaseorderSearchObj.run();
                     
-                     let results = purchaseorderSearchObj.run().getRange({
-                        start:0,
-                        end:1000
-                     });
-                     log.debug("resultsearch",searchResults);
+                    //  let results = purchaseorderSearchObj.run().getRange({
+                    //     start:0,
+                    //     end:1000
+                    //  });
+                    //  log.debug("resultsearch",searchResults);
                      let pageSize = 10;
-                     let pagedData = purchaseorderSearchObj.runPaged({ pageSize: pageSize });
-                     let searchResultCount = pagedData.count;
-                    log.debug("purchaseorderSearchObj result count",searchResultCount);
+                    //  let pagedData = purchaseorderSearchObj.runPaged({ pageSize: pageSize });
+                    //  let searchResultCount = pagedData.count;
+                    // log.debug("purchaseorderSearchObj result count",searchResultCount);
                    
-                    let pageId = parseInt(scriptContext.request.parameters.pageid)||0;   
-                     let pageCount = Math.ceil(searchResultCount / pageSize);
-                     log.debug("pageCount",pageCount);
+                    
+                    //  let pageCount = Math.ceil(searchResultCount / pageSize);
+                    //  log.debug("pageCount",pageCount);
                    
-                     if (pageCount === 0) {
-                        alert("No Results Found")
-                      } else {
+                    //  if (pageCount === 0) {
+                    //     alert("No Results Found")
+                    //   } else {
                         
-                        if (pageId < 0 || pageId >= pageCount) {
-                          pageId = 0;
-                        }
-                        else if (pageId >= pageCount)
-                            pageId = pageCount - 1;
+                    //     if (pageId < 0 || pageId >= pageCount) {
+                    //       pageId = 0;
+                    //     }
+                        // else if (pageId >= pageCount)
+                        //     pageId = pageCount - 1;
 
-                        if (pageId != 0) {
-                            form.addButton({
-                                id : 'custpage_previous',
-                                label : 'Previous',
-                                functionName : 'getSuiteletPage(' + (pageId - 1) +')',
-                                container:'custpage_jj_page_group'
-                            });
-                        }
+                        // if (pageId != 0) {
+                        //     form.addButton({
+                        //         id : 'custpage_previous',
+                        //         label : 'Previous',
+                        //         functionName : 'getSuiteletPage(' + (pageId - 1) +')',
+                        //         container:'custpage_jj_page_group'
+                        //     });
+                        // }
             
-                        if (pageId != pageCount - 1) {
-                            form.addButton({
-                                id : 'custpage_next',
-                                label : 'Next',
-                                functionName : 'getSuiteletPage(' +(pageId + 1) + ')',
-                                container:'custpage_jj_page_group'
-                            });
-                        }
+                        // if (pageId != pageCount - 1) {
+                        //     form.addButton({
+                        //         id : 'custpage_next',
+                        //         label : 'Next',
+                        //         functionName : 'getSuiteletPage(' +(pageId + 1) + ')',
+                        //         container:'custpage_jj_page_group'
+                        //     });
+                        // }
                         
-                        let addResults = fetchSearchResult(pagedData, pageId);
-                        log.debug("array result",addResults);
-                        var j = 0;
-                        addResults.forEach(function (result) {
+                //         let addResults = fetchSearchResult(pagedData, pageId);
+                //         log.debug("array result",addResults);
+                //         var j = 0;
+                        for(let j =0;j<results.length;j++) {
                            subList.setSublistValue({
                                id: "custpage_jj_sub_porder_docno",
                                line: j,
-                               value: result.docno
+                               value: results[j].docno
                            });
                            subList.setSublistValue({
                                id: "custpage_jj_sub_porder_vendor",
                                line: j,
-                               value: result.vendor
+                               value: results[j].vendor
                            });
                            subList.setSublistValue({
                                id: "custpage_jj_sub_porder_memo",
                                line: j,
-                               value: result.memo
+                               value: results[j].memo
                            });
                            memo.updateDisplayType({
                                displayType : serverWidget.FieldDisplayType.ENTRY
@@ -314,34 +400,16 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file','N/redir
                            subList.setSublistValue({
                                id: "custpage_jj_sub_porder_total",
                                line: j,
-                               value: result.total
-                           });
-                           j++;
-                       })
+                               value: results[j].total
+                           });    
                 }
+                        for(let j = 0; j < totalLines; j++){
+                            selectOptions.addSelectOption({
+                                value: j,
+                                text: j+1
+                            });
+                        }
                    
-                     for (let i = 0; i < pageCount; i++) {
-                    if (i == pageId) {
-                        selectOptions.addSelectOption({
-                            value : 'pageid_' + i,
-                            text : ((i * pageSize) + 1) + ' - ' + ((i + 1) * pageSize),
-                            isSelected:true
-                        });
-                        // redirect.toSuitelet({
-                        //     scriptId: "customscript_jj_sl_email_sup_otp7939",
-                        //     deploymentId: "customdeploy_jj_sl_email_sup_otp7939",
-                        //     parameters:{
-                        //         pageid : pageId
-                        //     }
-                        // })
-                    } else {
-                        selectOptions.addSelectOption({
-                            value : 'pageid_' + i,
-                            text : ((i * pageSize) + 1) + ' - ' + ((i + 1) * pageSize)
-                        });
-                    }
-                    log.debug("'pageid_' "+ i)
-                    }
                 
 
              }

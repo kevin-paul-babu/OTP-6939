@@ -308,9 +308,9 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file','N/encod
                             line: i,
                             value: results[i].getValue({ name: "memo", label: "Memo"})||''
                         });
-                        // memo.updateDisplayType({
-                        //     displayType : serverWidget.FieldDisplayType.ENTRY
-                        // });
+                        memo.updateDisplayType({
+                            displayType : serverWidget.FieldDisplayType.ENTRY
+                        });
                         reason.updateDisplayType({
                             displayType : serverWidget.FieldDisplayType.ENTRY
                         });
