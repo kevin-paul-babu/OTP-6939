@@ -53,9 +53,9 @@
       <displayheight></displayheight>
       <displaytype>NORMAL</displaytype>
       <displaywidth></displaywidth>
-      <dynamicdefault></dynamicdefault>
+      <dynamicdefault>NOW</dynamicdefault>
       <encryptatrest>F</encryptatrest>
-      <fieldtype>DATE</fieldtype>
+      <fieldtype>DATETIMETZ</fieldtype>
       <globalsearch>F</globalsearch>
       <help></help>
       <isformula>F</isformula>
