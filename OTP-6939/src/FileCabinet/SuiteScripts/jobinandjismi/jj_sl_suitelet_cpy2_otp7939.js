@@ -2,7 +2,7 @@
  * @NApiVersion 2.1
  * @NScriptType Suitelet
  */
-define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file','N/encode','N/format'],
+define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file','N/encode'],
     /**
  * @param{email} email
  * @param{record} record
@@ -10,9 +10,8 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file','N/encod
  * @param{serverWidget} serverWidget
  * @param{file} file
  *  @param{encode} encode
- *  @param{format} format
  */
-    (email, record, search, serverWidget, file,encode,format) => {
+    (email, record, search, serverWidget, file,encode) => {
         /**
          * Defines the Suitelet script trigger point.
          * @param {Object} scriptContext
@@ -46,21 +45,6 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file','N/encod
                 isDynamic: true,
                 defaultValues: Object
             });
-            let date = new Date();
-            let day  = date.getDate();
-            let month = date.getMonth()+1;
-            let year  = date.getFullYear();
-            let currentDate = `${month}/${day}/${year}`;
-            // let currentDateL = format.format({
-            //     value: currentDate,
-            //     type: format.Type.DATE
-            // })
-            // log.debug("currentDate",currentDateL);
-            // recordObj.setValue({
-            //     fieldId: "custrecord_jj_sub_date",
-            //     value: currentDateL,
-            //     ignoreFieldChange: true
-            // })
             for(let i =0;i<arrayData.length;i++){
                
                 recordObj.setValue({
@@ -158,54 +142,7 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file','N/encod
         
           
         }
-        // function createCsvFile(request,lineCount){
-        //     let docNo ;
-        //     let vendor;let memo;
-        //     let total;
-        //     //let fileId;
-        //     let csvContent = 'DocumentNo,Vendor,Memo,Amount\n';
-        //     for(let i=0;i<lineCount;i++){
-        //         let select = request.getSublistValue({
-        //             group: "custpage_jj_porder",
-        //             line:i,
-        //             name: "custpage_jj_sub_porder_select"
-        //         });
-        //         log.debug("select",select);
-        //         if(select ==='T'){
-        //         docNo = request.getSublistValue({
-        //             group: "custpage_jj_porder",
-        //             line:i,
-        //             name: "custpage_jj_sub_porder_docno"
-        //         });
-        //         vendor  = request.getSublistValue({
-        //             group: "custpage_jj_porder",
-        //             line:i,
-        //             name:"custpage_jj_sub_porder_vendor"
-        //         });
-               
-        //         memo  = request.getSublistValue({
-        //             group: "custpage_jj_porder",
-        //             line:i,
-        //             name: "custpage_jj_sub_porder_memo"
-        //         });
-              
-        //        total  = request.getSublistValue({
-        //             group: "custpage_jj_porder",
-        //             line:i,
-        //             name: "custpage_jj_sub_porder_total"
-        //         });
-        //         csvContent +=docNo+','+vendor+','+memo+','+total+"\n";
-              
-        //         } 
-           
-
-              
-              
-        //     }
-           
-        //     return csvContent;
-        // }
-        
+       
         function SearchResults(employeeId,pageId){
             try {
                    
@@ -243,26 +180,32 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file','N/encod
                  let pageSize = 10;
                  let pagedData = purchaseorderSearchObj.runPaged({ pageSize: pageSize });
                  let searchResultCount = pagedData.count;
-                 log.debug("purchaseorderSearchObj result count",searchResultCount);
-                 //selectOptions.defaultValue = pageId;
-                     let pageCount = Math.ceil(searchResultCount / pageSize);
-                     log.debug("pageCount",pageCount);
-                    let currentPage;
-                     if (pageCount === 0) {
-                        alert("No Results Found");
-                      } else {
-                        
-                        if (pageId < 0 || pageId >= pageCount) {
-                          pageId = 0;
-                        }
-                        currentPage = pagedData.fetch({
-                            index : pageId
-                        });
-                        return {
-                            currentPage:currentPage,
-                            pageCount:pageCount,
-                            pageid:pageId
-                        }
+                 if(searchResultCount== 0){
+                   return "No Search Results Found"
+                 }
+                 else{
+                    log.debug("purchaseorderSearchObj result count",searchResultCount);
+                    //selectOptions.defaultValue = pageId;
+                        let pageCount = Math.ceil(searchResultCount / pageSize);
+                        log.debug("pageCount",pageCount);
+                       let currentPage;
+                        if (pageCount === 0) {
+                        //    alert("No Results Found");
+                         } else {
+                           
+                           if (pageId < 0 || pageId >= pageCount) {
+                             pageId = 0;
+                           }
+                           currentPage = pagedData.fetch({
+                               index : pageId
+                           });
+                           return {
+                               currentPage:currentPage,
+                               pageCount:pageCount,
+                               pageid:pageId
+                           }
+                 }
+                
                        
                 }
                 
@@ -491,12 +434,18 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file','N/encod
                      employee.defaultValue = employeeId;
                     selectOptions.defaultValue = pageId;
                     let searchData = SearchResults(employeeId,pageId)
-                    log.debug("sear",searchData);
+                    if(searchData ==="No Search Results Found"){
+                        scriptContext.response.writePage("No Search Results Found"); 
+                    }
+                    else{
+                        log.debug("sear",searchData);
                     let searchPage;
                     let totalLines;
                     searchPage = searchData.currentPage.data;
-                    log.debug("currentPage",searchPage);
+             
+                        log.debug("currentPage",searchPage);
                     totalLines = searchData.pageCount;
+              
                     let pageid = searchData.pageid;
                     let results = fetchSearchResult(searchPage);
                     log.debug("results",results);
@@ -533,6 +482,11 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget','N/file','N/encod
                         }
                    
                 
+                    
+
+                    
+                    }
+                    
 
              }
              scriptContext.response.writePage(form);     

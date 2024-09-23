@@ -84,6 +84,7 @@ define(['N/currentRecord', 'N/url'],
             let pageId = currRecord.getValue({
                 fieldId: "custpage_jj_pageid"
             });
+            
             console.log("employee",employeeId);
             if(employeeId){
             document.location = url.resolveScript({
